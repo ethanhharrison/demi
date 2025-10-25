@@ -1,0 +1,12 @@
+lerobot-record \
+    --robot.type=so101_follower \
+    --robot.port=/dev/tty.usbmodem5A7A0186521 \
+    --robot.id=my_white_robot_arm \
+    --teleop.type=so101_leader \
+    --teleop.port=/dev/tty.usbmodem5A4B0479551 \
+    --teleop.id=my_black_leader_arm \
+    --display_data=true \
+    --dataset.repo_id=ehharrison/demi_trajectories \
+    --dataset.num_episodes=1 \
+    --dataset.episode_time_s=10 \
+    --dataset.single_task="offensive spray"
