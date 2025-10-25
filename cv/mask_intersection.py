@@ -1,0 +1,214 @@
+import numpy as np
+import cv2
+from typing import Union
+import tempfile
+import os
+
+def mask_overlap_percentage(
+    mask_depth: np.ndarray,
+    mask_seg: np.ndarray,
+    invert_depth: bool = False,
+    invert_seg: bool = False,
+) -> float:
+    """
+    Compute the percentage overlap (IoU x 100) between two binary masks,
+    verifying that they have the same shape, dtype, and valid binary values.
+    Optionally invert either mask so that black or white can represent the
+    "kept" region.
+
+    Args:
+        mask_depth (np.ndarray): Binary depth mask (0 or 1).
+        mask_seg (np.ndarray): Binary segmentation mask (0 or 1).
+        invert_depth (bool): If True, invert depth mask (swap 0↔1).
+        invert_seg (bool): If True, invert segmentation mask (swap 0↔1).
+
+    Returns:
+        float: Overlap percentage between 0 and 100.
+    """
+    #  Validate shapes 
+    if mask_depth.shape != mask_seg.shape:
+        raise ValueError(f"Mask shape mismatch: {mask_depth.shape} vs {mask_seg.shape}")
+
+    #  Validate dtypes 
+    if mask_depth.dtype != mask_seg.dtype:
+        raise ValueError(f"Mask dtype mismatch: {mask_depth.dtype} vs {mask_seg.dtype}")
+
+    #  Validate binary format 
+    for name, mask in [("Depth", mask_depth), ("Segmentation", mask_seg)]:
+        unique_vals = np.unique(mask)
+        if not np.all(np.isin(unique_vals, [0, 1])):
+            raise ValueError(f"{name} mask has non-binary values: {unique_vals}")
+
+    # Invert if requested
+    if invert_depth:
+        mask_depth = 1 - mask_depth
+    if invert_seg:
+        mask_seg = 1 - mask_seg
+
+    # Compute IoU × 100 
+    intersection = np.logical_and(mask_depth, mask_seg).sum()
+    union = np.logical_or(mask_depth, mask_seg).sum()
+
+    if union == 0:
+        return 0.0  # both empty or invalid
+
+    return float(intersection / union * 100)
+
+
+
+def mask_overlap_from_paths(
+    depth_path: Union[str, bytes],
+    seg_path: Union[str, bytes],
+    threshold: int = 127,
+    invert_depth: bool = False,
+    invert_seg: bool = False,
+) -> float:
+    """
+    Load two mask images from file paths and compute their overlap percentage (IoU × 100).
+
+    Args:
+        depth_path (str): Path to the binary depth mask image.
+        seg_path (str): Path to the binary segmentation mask image.
+        threshold (int): Pixel intensity threshold (0–255) used to binarize grayscale masks.
+        invert_depth (bool): If True, invert depth mask (swap 0↔1).
+        invert_seg (bool): If True, invert segmentation mask (swap 0↔1).
+
+    Returns:
+        float: Overlap percentage between 0 and 100.
+    """
+    # Load Mask
+    mask_depth = cv2.imread(depth_path, cv2.IMREAD_GRAYSCALE)
+    mask_seg = cv2.imread(seg_path, cv2.IMREAD_GRAYSCALE)
+
+    if mask_depth is None:
+        raise FileNotFoundError(f"Could not read depth mask from: {depth_path}")
+    if mask_seg is None:
+        raise FileNotFoundError(f"Could not read segmentation mask from: {seg_path}")
+
+    #  Binarize 
+    mask_depth = (mask_depth > threshold).astype(np.uint8)
+    mask_seg = (mask_seg > threshold).astype(np.uint8)
+
+    # Invert if needed
+    if invert_depth:
+        mask_depth = 1 - mask_depth
+    if invert_seg:
+        mask_seg = 1 - mask_seg
+
+    # Validate shape 
+    if mask_depth.shape != mask_seg.shape:
+        raise ValueError(f"Mask shape mismatch: {mask_depth.shape} vs {mask_seg.shape}")
+
+    # Ensure binary values
+    for name, mask in [("Depth", mask_depth), ("Segmentation", mask_seg)]:
+        vals = np.unique(mask)
+        if not np.all(np.isin(vals, [0, 1])):
+            raise ValueError(f"{name} mask has non-binary values: {vals}")
+
+    # Compute IoU × 100 
+    intersection = np.logical_and(mask_depth, mask_seg).sum()
+    union = np.logical_or(mask_depth, mask_seg).sum()
+
+    if union == 0:
+        return 0.0
+
+    return float(intersection / union * 100)
+
+
+def create_dummy_mask(shape, fill_coords=None):
+    """Helper: create a binary mask with optional filled rectangle coords."""
+    mask = np.zeros(shape, dtype=np.uint8)
+    if fill_coords:
+        x0, y0, x1, y1 = fill_coords
+        mask[y0:y1, x0:x1] = 1
+    return mask
+
+
+def save_temp_mask(mask):
+    """Save a mask to a temporary PNG and return its path."""
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    cv2.imwrite(tmp.name, mask * 255)  # scale 0/1 to 0/255 for PNG
+    return tmp.name
+
+
+def compare_mask_folders(
+    folder_depth: str,
+    folder_seg: str,
+    threshold: int = 127,
+    invert_depth: bool = False,
+    invert_seg: bool = False,
+    output_csv: str = "./mask_overlap_results.csv",
+):
+    """
+    Compare masks in two folders sequentially (by sorted filename order)
+    and compute overlap (IoU × 100) for each pair.
+
+    Args:
+        folder_depth (str): Folder containing depth masks (.png).
+        folder_seg (str): Folder containing segmentation masks (.png).
+        threshold (int): Binarization threshold (0–255).
+        invert_depth (bool): Invert depth mask (swap 0↔1).
+        invert_seg (bool): Invert segmentation mask (swap 0↔1).
+        output_csv (str): Optional path to save results as CSV.
+
+    Returns:
+        list[tuple[str, str, float]]: (depth_path, seg_path, overlap%)
+    """
+
+
+    # Ensure folders exist
+    depth_files = sorted([f for f in os.listdir(folder_depth) if f.endswith(".png")])
+    seg_files = sorted([f for f in os.listdir(folder_seg) if f.endswith(".png")])
+
+    n = min(len(depth_files), len(seg_files))
+    if n == 0:
+        raise ValueError("No overlapping image pairs found between folders.")
+
+    print(f"Comparing {n} pairs from:\n  {folder_depth}\n  {folder_seg}\n")
+
+    results = []
+
+    for i in range(n):
+        path_depth = os.path.join(folder_depth, depth_files[i])
+        path_seg = os.path.join(folder_seg, seg_files[i])
+        try:
+            overlap = mask_overlap_from_paths(
+                path_depth,
+                path_seg,
+                threshold=threshold,
+                invert_depth=invert_depth,
+                invert_seg=invert_seg,
+            )
+            print(f"[{i+1}/{n}] {depth_files[i]} vs {seg_files[i]} → {overlap:.2f}%")
+            results.append((depth_files[i], seg_files[i], overlap))
+        except Exception as e:
+            print(f"[{i+1}/{n}] Error comparing {depth_files[i]} and {seg_files[i]}: {e}")
+
+    return results
+
+
+if __name__ == '__main__':
+    # Single
+    # overlap = mask_overlap_from_paths(
+    # "mask_path/mask_output1_percentile.png",
+    # "mask_path/mask_output4_fixed.png",
+    # invert_depth=True,
+    # invert_seg=True
+    # )
+    # print(f"Mask overlap: {overlap:.2f}%")
+    # # run_dummy_tests()
+
+    print('Positives')
+    compare_mask_folders(
+        folder_depth="./mask_path/positives",
+        folder_seg="./segmentation_images/positives",
+        invert_depth=True,
+        invert_seg=False,
+    )
+    print('Negatives')
+    compare_mask_folders(
+        folder_depth="./mask_path/negatives",
+        folder_seg="./segmentation_images/negatives",
+        invert_depth=True,
+        invert_seg=False,
+    )
