@@ -7,20 +7,17 @@ Reference:
 - Sensirion SGP30 Datasheet (Document Number: 001168)
   https://sensirion.com/media/documents/3E3B3B27/6163E39E/Sensirion_Gas_Sensors_SGP30_Datasheet.pdf
 
-This script:
-  • Initializes the IAQ algorithm (required after every power-up)
-  • Periodically issues MEASURE_AIR_QUALITY (0x2008)
-  • Validates each 16-bit word with Sensirion’s CRC-8 checksum
-  • Extracts TVOC (ppb) and prints to console (JSON or plain text)
+This module provides functions to:
+  • Initialize the IAQ algorithm (required after every power-up)
+  • Measure air quality (CO2eq & TVOC) via MEASURE_AIR_QUALITY (0x2008)
+  • Validate data with Sensirion's CRC-8 checksum
 """
 
-import argparse
 import json
-import signal
 import sys
 import time
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from smbus2 import SMBus, i2c_msg
 
@@ -28,26 +25,9 @@ from smbus2 import SMBus, i2c_msg
 SGP30_ADDR: int = 0x58  # Default 7-bit I2C address per datasheet
 
 # === SGP30 command definitions (MSB, LSB) ===
-# Datasheet §6.3 “Command Set”
+# Datasheet §6.3 "Command Set"
 CMD_INIT_AIR_QUALITY: Tuple[int, int] = (0x20, 0x03)   # IAQ initialization
 CMD_MEASURE_AIR_QUALITY: Tuple[int, int] = (0x20, 0x08)  # Measure CO2eq & TVOC
-
-# Global stop flag (for clean exit)
-STOP: bool = False
-
-
-# ========================
-# Signal Handling
-# ========================
-
-def handle_sigint(signum: int, frame) -> None:
-    """Signal handler to safely stop polling loop on Ctrl+C or SIGTERM."""
-    global STOP
-    STOP = True
-
-
-signal.signal(signal.SIGINT, handle_sigint)
-signal.signal(signal.SIGTERM, handle_sigint)
 
 
 # ========================
@@ -168,93 +148,82 @@ def sgp30_measure_air_quality(bus: SMBus, addr: int) -> Tuple[int, int]:
     return eco2, tvoc
 
 
-# ========================
-# Main Execution Loop
-# ========================
-
-def main() -> None:
+def open_i2c_bus(bus_number: int = 1) -> Optional[SMBus]:
     """
-    Main function for continuous TVOC polling from SGP30.
-
-    Logic:
-    1. Open I2C bus.
-    2. Verify SGP30 presence (ACK check).
-    3. Initialize IAQ algorithm (required once after boot).
-    4. Enter loop: send MEASURE_AIR_QUALITY → read → print TVOC value.
-
-    User can choose plain-text or JSON output format.
+    Open an I2C bus connection.
+    
+    Args:
+        bus_number: I2C bus number (default: 1 for Raspberry Pi).
+    
+    Returns:
+        SMBus instance if successful, None if the bus cannot be opened.
     """
-    parser = argparse.ArgumentParser(
-        description="Poll TVOC from SGP30 (GY-SGP30) on Raspberry Pi I2C."
-    )
-    parser.add_argument("--bus", type=int, default=1,
-                        help="I2C bus number (default: 1)")
-    parser.add_argument("--addr", type=lambda x: int(x, 0),
-                        default=SGP30_ADDR,
-                        help="I2C address in decimal or hex (default: 0x58)")
-    parser.add_argument("--interval", type=float, default=1.0,
-                        help="Polling interval seconds (default: 1.0)")
-    parser.add_argument("--plain", action="store_true",
-                        help="Output plain text instead of JSON")
-    args = parser.parse_args()
-
-    use_json = not args.plain
-
-    # Open the I2C bus. On Raspberry Pi, bus 1 uses GPIO2 (SDA) and GPIO3 (SCL).
     try:
-        bus = SMBus(args.bus)
+        return SMBus(bus_number)
     except FileNotFoundError:
-        print(f"Cannot open I2C bus {args.bus}. Enable I2C via raspi-config.",
-              file=sys.stderr)
-        sys.exit(2)
+        return None
 
+
+def verify_device_presence(bus: SMBus, addr: int) -> bool:
+    """
+    Verify that a device is present at the specified I2C address.
+    
+    Args:
+        bus: Active SMBus instance.
+        addr: I2C address to check.
+    
+    Returns:
+        True if device acknowledges, False otherwise.
+    """
     try:
-        # Quick probe to ensure device acknowledges (0-byte write)
-        try:
-            bus.i2c_rdwr(i2c_msg.write(args.addr, []))
-        except OSError:
-            print(f"No device found at 0x{args.addr:02X}. Check wiring and power.",
-                  file=sys.stderr)
-            sys.exit(3)
+        bus.i2c_rdwr(i2c_msg.write(addr, []))
+        return True
+    except OSError:
+        return False
 
-        # Initialize the IAQ algorithm
-        sgp30_init(bus, args.addr)
-        print("Polling TVOC (ppb). Press Ctrl+C to stop.")
 
-        # Continuous measurement loop
-        while not STOP:
-            try:
-                # Command measurement and parse results
-                eco2_ppm, tvoc_ppb = sgp30_measure_air_quality(bus, args.addr)
-                ts = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+def format_measurement_json(tvoc_ppb: int, sensor_name: str = "SGP30") -> str:
+    """
+    Format a TVOC measurement as a JSON string.
+    
+    Args:
+        tvoc_ppb: TVOC value in parts per billion.
+        sensor_name: Name of the sensor (default: "SGP30").
+    
+    Returns:
+        JSON string with timestamp, sensor name, and TVOC value.
+    """
+    ts = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    return json.dumps({
+        "time_utc": ts,
+        "sensor": sensor_name,
+        "tvoc_ppb": tvoc_ppb
+    }, separators=(",", ":"), ensure_ascii=False)
 
-                # Print as JSON or plain text
-                if use_json:
-                    print(json.dumps({
-                        "time_utc": ts,
-                        "sensor": "SGP30",
-                        "tvoc_ppb": tvoc_ppb
-                    }, separators=(",", ":"), ensure_ascii=False))
-                else:
-                    print(f"{ts} TVOC={tvoc_ppb} ppb")
 
-            except (ValueError, OSError) as e:
-                # CRC or I²C communication errors
-                print(f"[SGP30] Read error: {e}", file=sys.stderr)
+def format_measurement_plain(tvoc_ppb: int) -> str:
+    """
+    Format a TVOC measurement as plain text.
+    
+    Args:
+        tvoc_ppb: TVOC value in parts per billion.
+    
+    Returns:
+        Plain text string with timestamp and TVOC value.
+    """
+    ts = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    return f"{ts} TVOC={tvoc_ppb} ppb"
 
-            # Maintain user-specified polling interval (default 1 Hz)
-            time.sleep(max(0.01, args.interval))
 
-    finally:
+def close_bus(bus: Optional[SMBus]) -> None:
+    """
+    Safely close an I2C bus connection.
+    
+    Args:
+        bus: SMBus instance to close (can be None).
+    """
+    if bus is not None:
         try:
             bus.close()
         except Exception:
             pass
-
-
-# ========================
-# Entry Point
-# ========================
-
-if __name__ == "__main__":
-    main()

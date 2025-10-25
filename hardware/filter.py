@@ -54,20 +54,3 @@ def moving_average(seq: Iterable[float], N: int, *, require_full_window: bool = 
     for v in seq:
         yield ma.update(float(v))
 
-# Optional convenience for quick CLI testing:
-if __name__ == "__main__":
-    # Example: echo "1 2 3 4 5 6" | python3 filter.py 3
-    import sys
-    if len(sys.argv) < 2:
-        print("Usage: filter.py <N>   # reads whitespace-separated numbers from stdin", file=sys.stderr)
-        sys.exit(1)
-    N = int(sys.argv[1])
-    data = []
-    for token in sys.stdin.read().split():
-        try:
-            data.append(float(token))
-        except ValueError:
-            pass
-    for y in moving_average(data, N):
-        print("" if y is None else f"{y:.6f}")
-
