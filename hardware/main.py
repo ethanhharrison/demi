@@ -81,7 +81,8 @@ class HardwareSampler:
         try:
             while not self.stop:
                 try:
-                    eco2, tvoc = sensors.sgp30_measure_air_quality(bus, self.sensor_addr)
+                    # Swap for 'sensors.sgp30_measure_air_quality' if sensor available
+                    eco2, tvoc = sensors.sgp30_measure_air_quality_pseudo(bus, self.sensor_addr)
                     filtered = moving_avg.update(float(tvoc))
                     self.tvoc_raw.append(tvoc)
                     if filtered is not None:
