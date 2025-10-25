@@ -145,57 +145,6 @@ def save_temp_mask(mask):
     return tmp.name
 
 
-def run_dummy_tests():
-    print("Running dummy mask overlap tests...\n")
-
-    # --- Case 1: identical masks (100% overlap) ---
-    mask1 = create_dummy_mask((100, 100), (20, 20, 80, 80))
-    mask2 = mask1.copy()
-    p1 = save_temp_mask(mask1)
-    p2 = save_temp_mask(mask2)
-    print("Test 1 (identical):", mask_overlap_from_paths(p1, p2))
-
-    # --- Case 2: partial overlap (25%) ---
-    mask1 = create_dummy_mask((100, 100), (20, 20, 80, 80))
-    mask2 = create_dummy_mask((100, 100), (50, 50, 90, 90))
-    p1 = save_temp_mask(mask1)
-    p2 = save_temp_mask(mask2)
-    print("Test 2 (partial overlap):", mask_overlap_from_paths(p1, p2))
-
-    # --- Case 3: no overlap (0%) ---
-    mask1 = create_dummy_mask((100, 100), (10, 10, 40, 40))
-    mask2 = create_dummy_mask((100, 100), (60, 60, 90, 90))
-    p1 = save_temp_mask(mask1)
-    p2 = save_temp_mask(mask2)
-    print("Test 3 (no overlap):", mask_overlap_from_paths(p1, p2))
-
-    # --- Case 4: mismatched shapes (should raise ValueError) ---
-    try:
-        mask1 = create_dummy_mask((100, 100), (10, 10, 40, 40))
-        mask2 = create_dummy_mask((80, 80), (10, 10, 40, 40))
-        p1 = save_temp_mask(mask1)
-        p2 = save_temp_mask(mask2)
-        print("Test 4 (mismatched shapes):", mask_overlap_from_paths(p1, p2))
-    except ValueError as e:
-        print("Test 4 (expected error):", e)
-
-    # --- Case 5: empty masks (both zeros → overlap = 0) ---
-    mask1 = np.zeros((50, 50), dtype=np.uint8)
-    mask2 = np.zeros((50, 50), dtype=np.uint8)
-    p1 = save_temp_mask(mask1)
-    p2 = save_temp_mask(mask2)
-    print("Test 5 (both empty):", mask_overlap_from_paths(p1, p2))
-
-    print("\nAll tests complete.")
-
-    # cleanup
-    for f in os.listdir(tempfile.gettempdir()):
-        if f.endswith(".png"):
-            try:
-                os.remove(os.path.join(tempfile.gettempdir(), f))
-            except:
-                pass
-
 
 
 import os
