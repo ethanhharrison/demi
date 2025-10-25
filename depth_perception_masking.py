@@ -78,7 +78,7 @@ def process_depth_dir(input_dir="./outputs", output_dir="./mask_path"):
     print(f"Processing {len(npy_files)} depth maps in {input_dir} ...")
 
     # choose method (as before)
-    method_name = "percentile"  # change this section below if desired
+    method_name = "fixed"  # change this section below if desired
 
     # parameters tuned by your previous calibration
     if method_name == "calibrated":
@@ -100,7 +100,7 @@ def process_depth_dir(input_dir="./outputs", output_dir="./mask_path"):
 
     elif method_name == "fixed":
         name = "fixed"
-        near_thresh = 0.85
+        near_thresh = 0.7
         for fname in npy_files:
             depth = np.load(os.path.join(input_dir, fname))
             mask = mask_fixed(depth, near_thresh=near_thresh)
@@ -120,5 +120,5 @@ def process_depth_dir(input_dir="./outputs", output_dir="./mask_path"):
 # Entry point
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
-    process_depth_dir(input_dir="./images/positives", output_dir="./mask_path/positives")
-    process_depth_dir(input_dir="./images/negatives", output_dir="./mask_path/negatives")
+    process_depth_dir(input_dir="./outputs/positives", output_dir="./mask_path/positives")
+    process_depth_dir(input_dir="./outputs/negatives", output_dir="./mask_path/negatives")

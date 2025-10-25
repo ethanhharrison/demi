@@ -196,14 +196,97 @@ def run_dummy_tests():
             except:
                 pass
 
-    
+
+
+import os
+import csv
+
+def compare_mask_folders(
+    folder_depth: str,
+    folder_seg: str,
+    threshold: int = 127,
+    invert_depth: bool = False,
+    invert_seg: bool = False,
+    output_csv: str = "./mask_overlap_results.csv",
+):
+    """
+    Compare masks in two folders sequentially (by sorted filename order)
+    and compute overlap (IoU × 100) for each pair.
+
+    Args:
+        folder_depth (str): Folder containing depth masks (.png).
+        folder_seg (str): Folder containing segmentation masks (.png).
+        threshold (int): Binarization threshold (0–255).
+        invert_depth (bool): Invert depth mask (swap 0↔1).
+        invert_seg (bool): Invert segmentation mask (swap 0↔1).
+        output_csv (str): Optional path to save results as CSV.
+
+    Returns:
+        list[tuple[str, str, float]]: (depth_path, seg_path, overlap%)
+    """
+    from pathlib import Path
+    import cv2
+    import numpy as np
+
+    # Ensure folders exist
+    depth_files = sorted([f for f in os.listdir(folder_depth) if f.endswith(".png")])
+    seg_files = sorted([f for f in os.listdir(folder_seg) if f.endswith(".png")])
+
+    n = min(len(depth_files), len(seg_files))
+    if n == 0:
+        raise ValueError("No overlapping image pairs found between folders.")
+
+    print(f"Comparing {n} pairs from:\n  {folder_depth}\n  {folder_seg}\n")
+
+    results = []
+
+    for i in range(n):
+        path_depth = os.path.join(folder_depth, depth_files[i])
+        path_seg = os.path.join(folder_seg, seg_files[i])
+        try:
+            overlap = mask_overlap_from_paths(
+                path_depth,
+                path_seg,
+                threshold=threshold,
+                invert_depth=invert_depth,
+                invert_seg=invert_seg,
+            )
+            print(f"[{i+1}/{n}] {depth_files[i]} vs {seg_files[i]} → {overlap:.2f}%")
+            results.append((depth_files[i], seg_files[i], overlap))
+        except Exception as e:
+            print(f"[{i+1}/{n}] Error comparing {depth_files[i]} and {seg_files[i]}: {e}")
+
+    return results
+
+# ---------------------------------------------------------------------
+# Example usage
+# ---------------------------------------------------------------------
+
+
+
 
 if __name__ == '__main__':
-    overlap = mask_overlap_from_paths(
-    "mask_path/mask_output1_percentile.png",
-    "mask_path/mask_output4_fixed.png",
-    invert_depth=True,
-    invert_seg=True
+    # Single
+    # overlap = mask_overlap_from_paths(
+    # "mask_path/mask_output1_percentile.png",
+    # "mask_path/mask_output4_fixed.png",
+    # invert_depth=True,
+    # invert_seg=True
+    # )
+    # print(f"Mask overlap: {overlap:.2f}%")
+    # # run_dummy_tests()
+
+    print('Positives')
+    compare_mask_folders(
+        folder_depth="./mask_path/positives",
+        folder_seg="./segmentation_images/positives",
+        invert_depth=True,
+        invert_seg=False,
     )
-    print(f"Mask overlap: {overlap:.2f}%")
-    # run_dummy_tests()
+    print('Negatives')
+    compare_mask_folders(
+        folder_depth="./mask_path/negatives",
+        folder_seg="./segmentation_images/negatives",
+        invert_depth=True,
+        invert_seg=False,
+    )

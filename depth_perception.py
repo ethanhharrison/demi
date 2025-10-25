@@ -61,9 +61,9 @@ def run_depth_inference(image_path: str, model, processor, device):
 # ---------------------------------------------------------------------
 # 3. Batch process all images
 # ---------------------------------------------------------------------
-def run_batch_inference():
-    IMAGE_DIR = "./images"
-    OUTPUT_DIR = "./outputs"
+def run_batch_inference(image_dir, output_dir):
+    IMAGE_DIR = image_dir
+    OUTPUT_DIR = output_dir
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Make sure folders exist
@@ -132,7 +132,8 @@ def masking_depth_perception(npy_files_for_masking_depth):
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
     # inspect_depth_files('/Users/ericji/Desktop/Repos/demi/outputs/Screenshot 2025-10-24 at 9.07.59 PM_raw.npy')
-    run_batch_inference()
+    run_batch_inference(image_dir="./images/positives", output_dir="./outputs/positives")
+    run_batch_inference(image_dir="./images/negatives", output_dir="./outputs/negatives")
 
 
-# 169 mb
+# 164 mb
