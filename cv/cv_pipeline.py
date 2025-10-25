@@ -28,7 +28,7 @@ class PerceptionPipeline:
 
     def __init__(
         self,
-        model_depth_dir: str = "./depth_model",
+        model_depth_dir: str = "./cv/depth_model",
         masking_strategy: str = "fixed",
         score_thresh: float = 0.5,
         invert_seg: bool = False,

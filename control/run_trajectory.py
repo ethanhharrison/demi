@@ -1,12 +1,12 @@
 import subprocess
 
-def take_trajectory(episode_num):
+def take_trajectory(episode_num: int = 0, repo_id: str = "demi_trajectories"):
     subprocess.run([
         "lerobot-replay",
         "--robot.type=so101_follower",
         "--robot.port=/dev/tty.usbmodem5A7A0186521",
         "--robot.id=my_white_robot_arm",
-        "--dataset.repo_id=ehharrison/demi_trajectories",
+        f"--dataset.repo_id=ehharrison/{repo_id}",
         f"--dataset.episode={episode_num}"
     ])
 
