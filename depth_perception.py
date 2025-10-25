@@ -42,8 +42,13 @@ def download_or_load():
 # ---------------------------------------------------------------------
 # 2. Run inference on a single image
 # ---------------------------------------------------------------------
+from PIL import Image, ImageOps
+
 def run_depth_inference(image_path: str, model, processor, device):
     image = Image.open(image_path).convert("RGB")
+    image = ImageOps.exif_transpose(image)
+
+
     inputs = processor(images=image, return_tensors="pt").to(device)
 
     with torch.no_grad():
