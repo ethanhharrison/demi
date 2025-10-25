@@ -115,7 +115,7 @@ if __name__ == "__main__":
     # choose method
     # mask = mask_fixed(depth, near_thresh=0.65) #[0.65 0.75] # e
     # mask = mask_percentile(depth, lower_pct=55) # [55] # The worst one imo
-    if True:
+    if False:
         name = 'calibrated' # second
         near_m = 0
         far_m = 0.90
@@ -123,14 +123,14 @@ if __name__ == "__main__":
         mask2 = mask_calibrated(depth2, scale=0.00045, near_m=near_m, far_m=far_m)
         mask3 = mask_calibrated(depth3, scale=0.00045, near_m=near_m, far_m=far_m)
         mask4 = mask_calibrated(depth4, scale=0.00045, near_m=near_m, far_m=far_m)
-    if False: # 4th
+    if True: # 4th
         name = 'percentile'
-        lower_pct = 55
+        lower_pct = 1
         mask1 = mask_percentile(depth1, lower_pct=lower_pct)
         mask2 = mask_percentile(depth2, lower_pct=lower_pct)
         mask3 = mask_percentile(depth3, lower_pct=lower_pct)
         mask4 = mask_percentile(depth4, lower_pct=lower_pct)
-    if True: # 0.85
+    if False: # 0.85
         near_thresh = 0.85
         name = 'fixed'
         mask1 = mask_fixed(depth1, near_thresh=near_thresh)
