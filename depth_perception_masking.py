@@ -100,7 +100,7 @@ def process_depth_dir(input_dir="./outputs", output_dir="./mask_path"):
 
     elif method_name == "fixed":
         name = "fixed"
-        near_thresh = 0.7
+        near_thresh = 0.7 # bigger = farther 
         for fname in npy_files:
             depth = np.load(os.path.join(input_dir, fname))
             mask = mask_fixed(depth, near_thresh=near_thresh)
