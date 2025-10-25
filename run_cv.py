@@ -205,11 +205,11 @@ if __name__ == "__main__":
         print(f"[Result] Mask overlap = {result['overlap']:.2f}%")
         print(f"[Result] Dominant quadrant = {result['quadrant']}")
         print(f"[Result] Will spray = {result['will_spray']}")
-        print('DONE')
+        print('DONE!')
 
     # pipeline.visualize(
     #     result["depth_map"],
     #     result["mask_depth"],
     #     result["mask_seg"],
     # )
-
+ 
