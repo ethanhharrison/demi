@@ -41,17 +41,13 @@ class DepthMaskGenerator:
         self.near_m = near_m
         self.far_m = far_m
 
-    # ---------------------------------------------------------------------
     # Normalization helper
-    # ---------------------------------------------------------------------
     @staticmethod
     def normalize_depth(depth: np.ndarray) -> np.ndarray:
         """Normalize a raw depth array to [0, 1]."""
         return (depth - depth.min()) / (depth.max() - depth.min() + 1e-8)
 
-    # ---------------------------------------------------------------------
     # Mask generation methods
-    # ---------------------------------------------------------------------
     def mask_fixed(self, depth: np.ndarray) -> np.ndarray:
         d = self.normalize_depth(depth)
         if self.far_thresh is None:
@@ -90,9 +86,7 @@ class DepthMaskGenerator:
             mask = (depth_m > self.near_m) & (depth_m < self.far_m)
         return (mask.astype(np.uint8) * 255)
 
-    # ---------------------------------------------------------------------
     # Dispatcher
-    # ---------------------------------------------------------------------
     def generate(self, depth: np.ndarray) -> np.ndarray:
         """Apply the selected masking strategy."""
         if self.method == "fixed":
@@ -106,9 +100,7 @@ class DepthMaskGenerator:
         else:
             raise ValueError(f"Unknown method: {self.method}")
 
-    # ---------------------------------------------------------------------
     # Directory batch processor
-    # ---------------------------------------------------------------------
     def process_dir(self, input_dir="./outputs", output_dir="./mask_path"):
         """Generate masks for all .npy files in a directory."""
         os.makedirs(output_dir, exist_ok=True)

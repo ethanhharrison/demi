@@ -27,27 +27,25 @@ def load_and_normalize_image(
     Returns:
         np.ndarray or PIL.Image: Normalized image (float32 if array, else PIL Image).
     """
-    # --- Load with PIL (handles most formats robustly) ---
+    # Load pil
     img = Image.open(image_path).convert("RGB")
-    img = ImageOps.exif_transpose(img)
+    img = ImageOps.exif_transpose(img) # for iphone data switch
 
-    # --- Resize if requested ---
+    # Resize if requested 
     if target_size is not None:
         img = img.resize(target_size, Image.BILINEAR)
 
     if not as_numpy:
         return img
 
-    # --- Convert to NumPy + normalize to [0,1] ---
+    # Convert to NumPy + normalize to [0,1]
     arr = np.asarray(img, dtype=np.float32) / 255.0
     return arr
 
 
 
 
-# ---------------------------------------------------------------------
 # Core: Array-to-array overlap
-# ---------------------------------------------------------------------
 def mask_overlap_percentage(
     mask_depth: np.ndarray,
     mask_seg: np.ndarray,
@@ -86,9 +84,7 @@ def mask_overlap_percentage(
     return float(intersection / union * 100) if union > 0 else 0.0
 
 
-# ---------------------------------------------------------------------
 # Convenience: Path-to-path comparison
-# ---------------------------------------------------------------------
 def mask_overlap_from_paths(
     depth_path: Union[str, bytes],
     seg_path: Union[str, bytes],
@@ -123,9 +119,7 @@ def mask_overlap_from_paths(
     return mask_overlap_percentage(mask_depth, mask_seg, invert_depth, invert_seg)
 
 
-# ---------------------------------------------------------------------
 # Folder-to-folder batch comparison
-# ---------------------------------------------------------------------
 def compare_mask_folders(
     folder_depth: str,
     folder_seg: str,
@@ -185,9 +179,7 @@ def compare_mask_folders(
     return results
 
 
-# ---------------------------------------------------------------------
 # Dummy test utilities
-# ---------------------------------------------------------------------
 def create_dummy_mask(shape, fill_coords=None):
     """Helper: create a binary mask with optional filled rectangle coords."""
     mask = np.zeros(shape, dtype=np.uint8)
@@ -220,10 +212,6 @@ def rename_files_in_order(folder_path: str):
         os.rename(src, dst)
         print(f"Renamed: {filename} -> {new_name}")
 
-
-
-
-import numpy as np
 
 def dominant_quadrant(mask: np.ndarray) -> int:
     """
@@ -266,9 +254,6 @@ def dominant_quadrant(mask: np.ndarray) -> int:
 
 
 
-# ---------------------------------------------------------------------
-# Example entry point
-# ---------------------------------------------------------------------
 if __name__ == "__main__":
     print("Positives")
     compare_mask_folders(

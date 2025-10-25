@@ -32,9 +32,7 @@ class DepthEstimator:
         print(f"[Init] DepthEstimator using {self.model_id} on {self.device}")
         self.model, self.processor = self._load_or_download()
 
-    # ------------------------------------------------------------------
     # Private model loader
-    # ------------------------------------------------------------------
     def _load_or_download(self):
         """Load local model if available, otherwise download and cache."""
         if os.path.exists(os.path.join(self.model_dir, "config.json")):
@@ -52,9 +50,7 @@ class DepthEstimator:
 
         return model.to(self.device).eval(), processor
 
-    # ------------------------------------------------------------------
     # Public: single image or array inference
-    # ------------------------------------------------------------------
     def infer(self, image_array: np.ndarray = None, image_path: str = None) -> np.ndarray:
         """
         Run depth estimation on either a NumPy RGB array or an image path.
@@ -70,7 +66,7 @@ class DepthEstimator:
         if image_array is None and image_path is None:
             raise ValueError("You must provide either `image_array` or `image_path`.")
 
-        # --- Convert NumPy input to PIL Image ---
+        # Convert NumPy input to PIL Image
         if image_array is not None:
             if image_array.dtype != np.uint8:
                 # assume normalized [0,1] floats → scale back to [0,255]
@@ -80,7 +76,7 @@ class DepthEstimator:
             img = Image.open(image_path).convert("RGB")
             img = ImageOps.exif_transpose(img)
 
-        # --- Preprocess & predict ---
+        # Preprocess & predict 
         inputs = self.processor(images=img, return_tensors="pt").to(self.device)
         with torch.no_grad():
             outputs = self.model(**inputs)
@@ -88,9 +84,7 @@ class DepthEstimator:
 
         return depth
 
-    # ------------------------------------------------------------------
     # Private: batch test helper (for internal validation only)
-    # ------------------------------------------------------------------
     def _process_dir(self, image_dir: str, output_dir: str):
         """Internal batch helper for quick testing or dataset generation."""
         os.makedirs(output_dir, exist_ok=True)
@@ -122,9 +116,7 @@ class DepthEstimator:
 
         print(f"[Done] Processed {len(image_files)} total images.")
 
-    # ------------------------------------------------------------------
     # Static utility
-    # ------------------------------------------------------------------
     @staticmethod
     def inspect_depth_file(npy_path: str):
         """Inspect stored depth map statistics."""
@@ -135,9 +127,7 @@ class DepthEstimator:
         print("Example values:", depth[::50, ::50])
 
 
-# ----------------------------------------------------------------------
 # Internal test run (manual)
-# ----------------------------------------------------------------------
 if __name__ == "__main__":
     estimator = DepthEstimator()
 

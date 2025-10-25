@@ -1,6 +1,8 @@
 import numpy as np
-
-import numpy as np
+import cv2
+from typing import Union
+import tempfile
+import os
 
 def mask_overlap_percentage(
     mask_depth: np.ndarray,
@@ -9,7 +11,7 @@ def mask_overlap_percentage(
     invert_seg: bool = False,
 ) -> float:
     """
-    Compute the percentage overlap (IoU × 100) between two binary masks,
+    Compute the percentage overlap (IoU x 100) between two binary masks,
     verifying that they have the same shape, dtype, and valid binary values.
     Optionally invert either mask so that black or white can represent the
     "kept" region.
@@ -23,27 +25,27 @@ def mask_overlap_percentage(
     Returns:
         float: Overlap percentage between 0 and 100.
     """
-    # --- Validate shapes ---
+    #  Validate shapes 
     if mask_depth.shape != mask_seg.shape:
         raise ValueError(f"Mask shape mismatch: {mask_depth.shape} vs {mask_seg.shape}")
 
-    # --- Validate dtypes ---
+    #  Validate dtypes 
     if mask_depth.dtype != mask_seg.dtype:
         raise ValueError(f"Mask dtype mismatch: {mask_depth.dtype} vs {mask_seg.dtype}")
 
-    # --- Validate binary format ---
+    #  Validate binary format 
     for name, mask in [("Depth", mask_depth), ("Segmentation", mask_seg)]:
         unique_vals = np.unique(mask)
         if not np.all(np.isin(unique_vals, [0, 1])):
             raise ValueError(f"{name} mask has non-binary values: {unique_vals}")
 
-    # --- Invert if requested ---
+    # Invert if requested
     if invert_depth:
         mask_depth = 1 - mask_depth
     if invert_seg:
         mask_seg = 1 - mask_seg
 
-    # --- Compute IoU × 100 ---
+    # Compute IoU × 100 
     intersection = np.logical_and(mask_depth, mask_seg).sum()
     union = np.logical_or(mask_depth, mask_seg).sum()
 
@@ -53,15 +55,6 @@ def mask_overlap_percentage(
     return float(intersection / union * 100)
 
 
-
-
-import cv2
-import numpy as np
-from typing import Union
-
-import cv2
-import numpy as np
-from typing import Union
 
 def mask_overlap_from_paths(
     depth_path: Union[str, bytes],
@@ -83,7 +76,7 @@ def mask_overlap_from_paths(
     Returns:
         float: Overlap percentage between 0 and 100.
     """
-    # --- Load masks ---
+    # Load Mask
     mask_depth = cv2.imread(depth_path, cv2.IMREAD_GRAYSCALE)
     mask_seg = cv2.imread(seg_path, cv2.IMREAD_GRAYSCALE)
 
@@ -92,27 +85,27 @@ def mask_overlap_from_paths(
     if mask_seg is None:
         raise FileNotFoundError(f"Could not read segmentation mask from: {seg_path}")
 
-    # --- Binarize ---
+    #  Binarize 
     mask_depth = (mask_depth > threshold).astype(np.uint8)
     mask_seg = (mask_seg > threshold).astype(np.uint8)
 
-    # --- Invert if needed ---
+    # Invert if needed
     if invert_depth:
         mask_depth = 1 - mask_depth
     if invert_seg:
         mask_seg = 1 - mask_seg
 
-    # --- Validate shape ---
+    # Validate shape 
     if mask_depth.shape != mask_seg.shape:
         raise ValueError(f"Mask shape mismatch: {mask_depth.shape} vs {mask_seg.shape}")
 
-    # --- Ensure binary values ---
+    # Ensure binary values
     for name, mask in [("Depth", mask_depth), ("Segmentation", mask_seg)]:
         vals = np.unique(mask)
         if not np.all(np.isin(vals, [0, 1])):
             raise ValueError(f"{name} mask has non-binary values: {vals}")
 
-    # --- Compute IoU × 100 ---
+    # Compute IoU × 100 
     intersection = np.logical_and(mask_depth, mask_seg).sum()
     union = np.logical_or(mask_depth, mask_seg).sum()
 
@@ -121,13 +114,6 @@ def mask_overlap_from_paths(
 
     return float(intersection / union * 100)
 
-
-import numpy as np
-import cv2
-import tempfile
-import os
-
-# --- assume mask_overlap_from_paths() is already defined above ---
 
 def create_dummy_mask(shape, fill_coords=None):
     """Helper: create a binary mask with optional filled rectangle coords."""
@@ -144,11 +130,6 @@ def save_temp_mask(mask):
     cv2.imwrite(tmp.name, mask * 255)  # scale 0/1 to 0/255 for PNG
     return tmp.name
 
-
-
-
-import os
-import csv
 
 def compare_mask_folders(
     folder_depth: str,
@@ -173,9 +154,7 @@ def compare_mask_folders(
     Returns:
         list[tuple[str, str, float]]: (depth_path, seg_path, overlap%)
     """
-    from pathlib import Path
-    import cv2
-    import numpy as np
+
 
     # Ensure folders exist
     depth_files = sorted([f for f in os.listdir(folder_depth) if f.endswith(".png")])
@@ -206,12 +185,6 @@ def compare_mask_folders(
             print(f"[{i+1}/{n}] Error comparing {depth_files[i]} and {seg_files[i]}: {e}")
 
     return results
-
-# ---------------------------------------------------------------------
-# Example usage
-# ---------------------------------------------------------------------
-
-
 
 
 if __name__ == '__main__':

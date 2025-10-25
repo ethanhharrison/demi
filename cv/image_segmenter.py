@@ -46,9 +46,7 @@ class PersonSegmenter:
         self.transform = self.weights.transforms()
         print("[Ready] PersonSegmenter initialized.")
 
-    # ------------------------------------------------------------------
     # Public: single image or array inference
-    # ------------------------------------------------------------------
     def infer(self, image_array: np.ndarray = None, image_path: str = None) -> np.ndarray:
         """
         Run person segmentation on either a NumPy RGB array or an image path.
@@ -74,7 +72,7 @@ class PersonSegmenter:
             img = Image.open(image_path).convert("RGB")
             img = ImageOps.exif_transpose(img)
 
-        # --- Transform + inference ---
+        # Transform + inference 
         inp = self.transform(img).unsqueeze(0).to(self.device)
         with torch.inference_mode():
             out = self.model(inp)["out"].softmax(1)[0]  # [C,H,W]
@@ -88,9 +86,7 @@ class PersonSegmenter:
 
         return binary_mask
 
-    # ------------------------------------------------------------------
     # Private: batch folder helper (for testing only)
-    # ------------------------------------------------------------------
     def _process_dir(self, input_dir: str, output_dir: str):
         """Internal batch helper for quick testing or dataset generation."""
         os.makedirs(output_dir, exist_ok=True)
@@ -116,9 +112,6 @@ class PersonSegmenter:
         print("\nAll masks saved to:", os.path.abspath(output_dir))
 
 
-# ----------------------------------------------------------------------
-# Internal test run
-# ----------------------------------------------------------------------
 if __name__ == "__main__":
     segmenter = PersonSegmenter(score_thresh=0.5, invert=False, target_size=(256, 256))
 

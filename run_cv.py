@@ -23,7 +23,7 @@ from cv.utils import mask_overlap_percentage, dominant_quadrant
 
 class PerceptionPipeline:
     """
-    Unified depth–segmentation–overlap pipeline.
+    Unified depth-segmentation-overlap pipeline.
     """
 
     def __init__(
@@ -59,9 +59,7 @@ class PerceptionPipeline:
         self.near_thresh = near_thresh
         self.return_keys = return_keys or ["overlap", "quadrant", "will_spray"]
 
-    # ------------------------------------------------------------------
     # Core normalization
-    # ------------------------------------------------------------------
     @staticmethod
     def _normalize_input(image_array: np.ndarray) -> np.ndarray:
         """
@@ -95,25 +93,25 @@ class PerceptionPipeline:
             if image_array is None:
                 raise FileNotFoundError(f"Could not read image at {image_path}")
 
-        # --- Step 1: Normalize once ---
+        # Normalize
         img_norm = self._normalize_input(image_array)
 
-        # --- Step 2: Run models ---
+        # Run Model
         depth_map = self.depth_model.infer(image_array=img_norm)
         mask_seg = self.seg_model.infer(image_array=img_norm)
 
         quadrant = dominant_quadrant(mask_seg)
 
-        # --- Step 3: Use generator directly ✅
+        # Use Generator for mask
         mask_depth = self.mask_generator.generate(depth_map)
         mask_depth = cv2.resize(mask_depth, self.target_size, interpolation=cv2.INTER_NEAREST)
 
-        # --- Step 4: IoU ---
+        # Intersection over union
         mask_depth_bin = (mask_depth > 127).astype(np.uint8)
         mask_seg_bin = (mask_seg > 127).astype(np.uint8)
         overlap = mask_overlap_percentage(mask_depth_bin, mask_seg_bin)
 
-        # ✅ build dictionary selectively
+        # Build dictionary selectively
         outputs = {
             "overlap": overlap,
             "mask_depth": mask_depth,
@@ -127,9 +125,7 @@ class PerceptionPipeline:
         # filter by self.return_keys
         return {k: v for k, v in outputs.items() if k in self.return_keys}
 
-    # ------------------------------------------------------------------
     # Optional visualization
-    # ------------------------------------------------------------------
     @staticmethod
     def visualize(
         mask_seg: np.ndarray,
@@ -187,9 +183,7 @@ class PerceptionPipeline:
 
 
 
-# ----------------------------------------------------------------------
 # Example usage
-# ----------------------------------------------------------------------
 if __name__ == "__main__":
     pipeline = PerceptionPipeline(
         near_thresh=0.7,
