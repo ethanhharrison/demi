@@ -164,7 +164,7 @@ if __name__ == "__main__":
         filter_points=5,
         tvoc_threshold=100.0,
         send_interval=5.0,  # seconds
-        mac_ip="172.20.10.2",
+        mac_ip="10.0.27.83",
         mac_user="eharrison",
         remote_path="/Users/eharrison/data/sensor_log.json",
     )

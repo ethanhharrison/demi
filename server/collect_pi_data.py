@@ -24,7 +24,7 @@ class LogHandler(FileSystemEventHandler):
         for line in new_data.strip().splitlines():
             try:
                 entry = json.loads(line)
-                print(f"{entry['datetime']} | Smelly: {entry['smelly']}")
+                print(f"{entry['datetime']} | Smelly: {entry['smelly']} | frame_b64: {entry.get('frame_b64')}")
             except Exception as e:
                 print(f"(Malformed line ignored) {e}")
 
