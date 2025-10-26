@@ -21,28 +21,21 @@ def load_config():
     except json.JSONDecodeError:
         raise ValueError("Malformed .config.json")
     
-config = load_config
+config = load_config()
 
 def send_flag_over_ssh(flag: str):
     """Send a control flag to Raspberry Pi using config file credentials."""
-    try:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(config["PI_IP"], username=config["PI_USER"])
 
-        ssh.connect(
-            config["PI_IP"],
-            username=config["PI_USER"],
-        )
+    sftp = ssh.open_sftp()
+    with sftp.file(config["PI_FLAG_PATH"], "w") as f:
+        f.write(flag + "\n")
+    sftp.close()
+    ssh.close()
 
-        sftp = ssh.open_sftp()
-        with sftp.file(config["PI_FLAG_PATH"], "w") as f:
-            f.write(flag + "\n")
-        sftp.close()
-        ssh.close()
-
-        print(f"[SSH] Sent flag '{flag}' to Pi at {config['PI_IP']}")
-    except Exception as e:
-        print(f"[ERROR] SSH send failed: {e}")
+    print(f"[SSH] Sent flag '{flag}' to Pi at {config['PI_IP']}")
 
 
 TRAJECTORY_MAP = {
@@ -70,7 +63,8 @@ def do_spray_action(smelly, frame_b64):
         time.sleep(1)
     elif frame_b64:
         image = b64_to_image(frame_b64)
-        quadrant, will_spray = predict_offensive_spray(image)
+        quadrant, will_spray = predict_offensive_spray(image_array=image)
+        print(quadrant, will_spray)
         if will_spray and quadrant in [1, 2, 4, 5, 7, 8]: 
             take_trajectory(TRAJECTORY_MAP["upper_left_start"])
             send_flag_over_ssh("MOVE SERVO")
@@ -83,10 +77,11 @@ def do_spray_action(smelly, frame_b64):
             time.sleep(3)
             take_trajectory(TRAJECTORY_MAP["upper_right_end"])
             time.sleep(1)
-    print("No Spray")
+    else:
+        print("No Spray")
     
 def handle_sensor_data(entry):
-    _, smelly, frame_b64 = entry["datetime"], entry["smelly"], entry.get("frame_b64")
+    timestamp, smelly, frame_b64 = entry["datetime"], entry["smelly"], entry.get("frame_b64")
     send_flag_over_ssh("IN PROGRESS")
     do_spray_action(smelly, frame_b64)
     send_flag_over_ssh("COMPLETE")
