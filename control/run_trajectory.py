@@ -1,4 +1,5 @@
 import subprocess
+import time
 
 def take_trajectory(episode_num: int = 0, repo_id: str = "demi_trajectories"):
     subprocess.run([
@@ -11,4 +12,6 @@ def take_trajectory(episode_num: int = 0, repo_id: str = "demi_trajectories"):
     ])
 
 if __name__ == "__main__":
-    take_trajectory(0)
+    for i in range(8):
+        take_trajectory(i)
+        time.sleep(3)

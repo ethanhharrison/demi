@@ -18,7 +18,8 @@ def handle_sensor_data(entry):
         if will_spray:
             # Run offensive-spray trajectory based on quadrant
             pass
-    print("No Spray")
+    else:
+        print("No Spray")
 
 def main():
     handler = LogHandler(handle_sensor_data)

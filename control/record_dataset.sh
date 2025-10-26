@@ -7,7 +7,7 @@ lerobot-record \
     --teleop.id=my_black_leader_arm \
     --display_data=true \
     --dataset.repo_id=ehharrison/demi_trajectories \
-    --dataset.num_episodes=1 \
-    --dataset.episode_time_s=10 \
+    --dataset.num_episodes=8 \
+    --dataset.episode_time_s=5 \
     --dataset.reset_time_s=10 \
-    --dataset.single_task="offensive spray"
+    --dataset.single_task="spray"
