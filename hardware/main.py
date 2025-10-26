@@ -17,6 +17,7 @@ from typing import Optional, Any, List
 
 import camera
 import sensors
+import actuator
 import filter as filter_module
 
 
@@ -55,6 +56,7 @@ class HardwareSampler:
         self._flag_thread: Optional[threading.Thread] = None
 
         signal.signal(signal.SIGINT, self._handle_exit)
+        actuator.setup_servo()
 
     def _handle_exit(self, sig: int, frame: Any) -> None:
         self.stop = True
@@ -177,6 +179,7 @@ class HardwareSampler:
                         print("[FLAGS] Received IN_PROGRESS → pausing sampling")
                     elif flag == "COMPLETE":
                         self.paused = False
+                        actuator.move_servo(5)
                         print("[FLAGS] Received COMPLETE → resuming sampling")
 
             except Exception as e:
