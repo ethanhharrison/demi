@@ -67,7 +67,7 @@ class HardwareSampler:
         try:
             while not self.stop:
                 if self.paused:
-                    time.sleep(0.5)
+                    time.sleep(1)
                     continue
                 result = camera.capture_frame(cap)
                 if result:
@@ -89,7 +89,7 @@ class HardwareSampler:
         try:
             while not self.stop:
                 if self.paused:
-                    time.sleep(0.5)
+                    time.sleep(1)
                     continue
                 try:
                     # Swap for 'sensors.sgp30_measure_air_quality' if sensor available
@@ -223,9 +223,9 @@ if __name__ == "__main__":
         filter_points=5,
         tvoc_threshold=100.0,
         send_interval=5.0,  # seconds
-        mac_ip="10.0.27.83",
-        mac_user="eharrison",
-        remote_path="/Users/eharrison/data/sensor_log.json",
+        mac_ip=config["MAC_IP"],
+        mac_user=config["MAC_USER"],
+        remote_path=config["MAC_REMOTE_PATH"],
     )
 
     sampler.start()

@@ -165,7 +165,7 @@ def sgp30_measure_air_quality_pseudo(bus: SMBus, addr: int) -> Tuple[int, int]:
     # TVOC: 0–600 ppb normal, 600–1200 elevated, >1200 high
     eco2_pseudo = random.randint(400, 2000)
     tvoc_pseudo = int(
-        max(0, random.gauss(150, 100))
+        max(0, random.gauss(400, 100))
     )
 
     return eco2_pseudo, tvoc_pseudo
