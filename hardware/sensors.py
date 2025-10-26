@@ -16,6 +16,7 @@ This module provides functions to:
 import json
 import sys
 import time
+import random
 from datetime import datetime
 from typing import List, Optional, Tuple
 
@@ -147,6 +148,27 @@ def sgp30_measure_air_quality(bus: SMBus, addr: int) -> Tuple[int, int]:
     eco2, tvoc = read_words_with_crc(bus, addr, 2)
     return eco2, tvoc
 
+def sgp30_measure_air_quality_pseudo(bus: SMBus, addr: int) -> Tuple[int, int]:
+    """
+    Generate a pseudorandom, artificial air-quality measurement
+    that mimics real SGP30 output for testing or simulation.
+
+    Args:
+        bus: SMBus instance (ignored, kept for API compatibility).
+        addr: I2C address (ignored, kept for API compatibility).
+
+    Returns:
+        (CO2eq_ppm, TVOC_ppb)
+    """
+    # Generate realistic ranges based on SGP30 behavior:
+    # CO2eq: ~400–2000 ppm typical indoor range
+    # TVOC: 0–600 ppb normal, 600–1200 elevated, >1200 high
+    eco2_pseudo = random.randint(400, 2000)
+    tvoc_pseudo = int(
+        max(0, random.gauss(400, 100))
+    )
+
+    return eco2_pseudo, tvoc_pseudo
 
 def open_i2c_bus(bus_number: int = 1) -> Optional[SMBus]:
     """

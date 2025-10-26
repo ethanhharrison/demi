@@ -11,11 +11,13 @@ import json
 import base64
 import cv2
 import paramiko
+import os
 from datetime import datetime
 from typing import Optional, Any, List
 
 import camera
 import sensors
+import actuator
 import filter as filter_module
 
 
@@ -26,7 +28,8 @@ class HardwareSampler:
                  send_interval: float = 5.0,
                  mac_ip: str = "",
                  mac_user: str = "",
-                 remote_path: str = "") -> None:
+                 remote_path: str = "",
+                 flag_path: str = "") -> None:
 
         self.camera_id = camera_id
         self.bus_num = bus_num
@@ -38,18 +41,22 @@ class HardwareSampler:
         self.mac_ip = mac_ip
         self.mac_user = mac_user
         self.remote_path = remote_path
+        self.flag_path = flag_path
 
         self.latest_frame: Optional[Any] = None
         self.tvoc_filtered: List[float] = []
         self.tvoc_raw: List[int] = []
         self.smelly: bool = False
         self.stop: bool = False
+        self.paused: bool = False
 
         self._camera_thread: Optional[threading.Thread] = None
         self._sensor_thread: Optional[threading.Thread] = None
         self._sender_thread: Optional[threading.Thread] = None
+        self._flag_thread: Optional[threading.Thread] = None
 
         signal.signal(signal.SIGINT, self._handle_exit)
+        actuator.setup_servo()
 
     def _handle_exit(self, sig: int, frame: Any) -> None:
         self.stop = True
@@ -61,6 +68,9 @@ class HardwareSampler:
         interval = 1.0 / self.sampling_hz
         try:
             while not self.stop:
+                if self.paused:
+                    time.sleep(1)
+                    continue
                 result = camera.capture_frame(cap)
                 if result:
                     ret, frame = result
@@ -80,8 +90,12 @@ class HardwareSampler:
         interval = 1.0 / self.sampling_hz
         try:
             while not self.stop:
+                if self.paused:
+                    time.sleep(1)
+                    continue
                 try:
-                    eco2, tvoc = sensors.sgp30_measure_air_quality(bus, self.sensor_addr)
+                    # Swap for 'sensors.sgp30_measure_air_quality' if sensor available
+                    eco2, tvoc = sensors.sgp30_measure_air_quality_pseudo(bus, self.sensor_addr)
                     filtered = moving_avg.update(float(tvoc))
                     self.tvoc_raw.append(tvoc)
                     if filtered is not None:
@@ -100,6 +114,11 @@ class HardwareSampler:
     def _sender_loop(self) -> None:
         """Append JSON lines to one remote file over SSH."""
         while not self.stop:
+
+            if self.paused:
+                time.sleep(1)
+                continue
+
             try:
                 frame = self.latest_frame
                 smelly = self.smelly
@@ -140,13 +159,46 @@ class HardwareSampler:
 
             time.sleep(self.send_interval)
 
+    def _flag_monitor_loop(self):
+        """Continuously check for pause/resume flags from server."""
+        print(f"[FLAGS] Watching {self.flag_path} for control signals...")
+        last_state = None
+        while not self.stop:
+            try:
+                if not os.path.exists(self.flag_path):
+                    time.sleep(1)
+                    continue
+
+                with open(self.flag_path, "r") as f:
+                    flag = f.read().strip()
+
+                if flag != last_state:
+                    last_state = flag
+                    if flag == "IN_PROGRESS":
+                        self.paused = True
+                        print("[FLAGS] Received IN_PROGRESS → pausing sampling")
+                    elif flag == "COMPLETE":
+                        self.paused = False
+                        print("[FLAGS] Received COMPLETE → resuming sampling")
+                    elif flag == "MOVE SERVO":
+                        actuator.move_servo(5)
+                        print("[FLAGS] Received MOVE SERVO")
+                        
+
+            except Exception as e:
+                print(f"[FLAGS] Error reading flag: {e}")
+
+            time.sleep(1)
+
     def start(self) -> None:
         self._camera_thread = threading.Thread(target=self._camera_loop, daemon=True)
         self._sensor_thread = threading.Thread(target=self._sensor_loop, daemon=True)
         self._sender_thread = threading.Thread(target=self._sender_loop, daemon=True)
+        self._flag_thread = threading.Thread(target=self._flag_monitor_loop, daemon=True)
         self._camera_thread.start()
         self._sensor_thread.start()
         self._sender_thread.start()
+        self._flag_thread.start()
 
     def stop_sampling(self) -> None:
         self.stop = True
@@ -156,17 +208,30 @@ class HardwareSampler:
             self._sensor_thread.join(timeout=1)
         if self._sender_thread:
             self._sender_thread.join(timeout=1)
+        if self._flag_thread:
+            self._flag_thread.join(timeout=1)
 
 
 if __name__ == "__main__":
+    
+    CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".config.json")
+
+    try:
+        with open(CONFIG_PATH, "r") as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Missing {CONFIG_PATH}! Please create .config.json.")
+    except json.JSONDecodeError:
+        raise ValueError("Malformed .config.json")
+
     sampler = HardwareSampler(
         sampling_hz=10.0,
         filter_points=5,
         tvoc_threshold=100.0,
         send_interval=5.0,  # seconds
-        mac_ip="10.0.27.83",
-        mac_user="eharrison",
-        remote_path="/Users/eharrison/data/sensor_log.json",
+        mac_ip=config["MAC_IP"],
+        mac_user=config["MAC_USER"],
+        remote_path=config["MAC_REMOTE_PATH"],
     )
 
     sampler.start()
