@@ -2,3 +2,4 @@ images/
 depth_model/
 __pycache__/
 *.pyc
+.config.json
