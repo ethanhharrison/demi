@@ -85,7 +85,6 @@ class PerceptionPipeline:
         image_path: Optional[str] = None,
         image_array: Optional[np.ndarray] = None,
     ) -> Dict[str, Any]:
-
         if image_array is None and image_path is None:
             raise ValueError("Must provide either image_array or image_path.")
         if image_array is None:

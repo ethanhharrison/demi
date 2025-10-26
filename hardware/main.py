@@ -232,6 +232,7 @@ if __name__ == "__main__":
         mac_ip=config["MAC_IP"],
         mac_user=config["MAC_USER"],
         remote_path=config["MAC_REMOTE_PATH"],
+        flag_path=config["PI_FLAG_PATH"],
     )
 
     sampler.start()
