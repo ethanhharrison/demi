@@ -39,43 +39,27 @@ def send_flag_over_ssh(flag: str):
 
 
 TRAJECTORY_MAP = {
-    "upper_left_start": 0,
-    "upper_left_end": 1,
-    "upper_right_start": 2,
-    "upper_right_end": 3,
-    "lower_left_start": 4,
-    "lower_left_end": 5,
-    "lower_right_start": 6,
-    "lower_right_end": 7
+    "upper_left": 0,
+    "upper_right": 1,
+    "lower_left": 2,
+    "lower_right": 3,
 }
 
 def do_spray_action(smelly, frame_b64):
     if smelly:
-        take_trajectory(TRAJECTORY_MAP["lower_left_start"])
-        send_flag_over_ssh("MOVE SERVO")
-        time.sleep(3)
-        take_trajectory(TRAJECTORY_MAP["lower_left_end"])
+        take_trajectory(TRAJECTORY_MAP["lower_left"])
         time.sleep(1)
-        take_trajectory(TRAJECTORY_MAP["lower_right_start"])
-        send_flag_over_ssh("MOVE_SERVO")
-        time.sleep(3)
-        take_trajectory(TRAJECTORY_MAP["lower_right_end"])
+        take_trajectory(TRAJECTORY_MAP["lower_right"])
         time.sleep(1)
     elif frame_b64:
         image = b64_to_image(frame_b64)
         quadrant, will_spray = predict_offensive_spray(image_array=image)
         print(quadrant, will_spray)
         if will_spray and quadrant in [1, 2, 4, 5, 7, 8]: 
-            take_trajectory(TRAJECTORY_MAP["upper_left_start"])
-            send_flag_over_ssh("MOVE SERVO")
-            time.sleep(3)
-            take_trajectory(TRAJECTORY_MAP["upper_left_end"])
+            take_trajectory(TRAJECTORY_MAP["upper_left"])
             time.sleep(1)
         if will_spray and quadrant in [2, 3 ,5, 6, 8, 9]:
-            take_trajectory(TRAJECTORY_MAP["upper_right_start"])
-            send_flag_over_ssh("MOVE_SERVO")
-            time.sleep(3)
-            take_trajectory(TRAJECTORY_MAP["upper_right_end"])
+            take_trajectory(TRAJECTORY_MAP["upper_right"])
             time.sleep(1)
     else:
         print("No Spray")
